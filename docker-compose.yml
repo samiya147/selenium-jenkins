@@ -2,7 +2,6 @@
 services:
   selenium-hub:
     image: selenium/hub:4.27.0
-    container_name: selenium-hub
     ports:
       - "4444:4444"
     healthcheck:
@@ -10,14 +9,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
 
   chrome:
     image: selenium/node-chrome:4.27.0
-    container_name: selenium-chrome
     depends_on:
       selenium-hub:
         condition: service_healthy
     shm_size: 2gb
+    ports:
+      - "7901:7900"
     environment:
       SE_EVENT_BUS_HOST: selenium-hub
       SE_EVENT_BUS_PUBLISH_PORT: 4442
@@ -26,11 +27,12 @@ services:
 
   firefox:
     image: selenium/node-firefox:4.27.0
-    container_name: selenium-firefox
     depends_on:
       selenium-hub:
         condition: service_healthy
     shm_size: 2gb
+    ports:
+      - "7902:7900"
     environment:
       SE_EVENT_BUS_HOST: selenium-hub
       SE_EVENT_BUS_PUBLISH_PORT: 4442
