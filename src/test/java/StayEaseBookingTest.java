@@ -184,6 +184,7 @@ public class StayEaseBookingTest {
                     "========== " + browser.toUpperCase()
                             + " TEST PASSED ==========\n"
             );
+            Thread.sleep(1000);
 
         } catch (Exception e) {
 
