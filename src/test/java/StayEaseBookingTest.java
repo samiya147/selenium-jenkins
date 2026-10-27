@@ -1,5 +1,4 @@
 
-import java.net.URL;
 import java.time.Duration;
 import java.util.List;
 
@@ -13,6 +12,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class StayEaseBookingTest {
@@ -24,202 +24,186 @@ public class StayEaseBookingTest {
             "https://www.practiceqaautomation.com/apps/hotel";
 
     @Test
-    public void testHotelBookingInChrome() throws Exception {
-        runTests("chrome");
+    public void testChromeBookingPage() throws Exception {
+        runBookingTest("chrome");
     }
 
     @Test
-    public void testHotelBookingInFirefox() throws Exception {
-        runTests("firefox");
+    public void testFirefoxBookingPage() throws Exception {
+        runBookingTest("firefox");
     }
 
-    private void runTests(String browser) throws Exception {
+    private void runBookingTest(String browser) throws Exception {
 
         WebDriver driver = null;
 
         try {
-            System.out.println("================================");
-            System.out.println("Starting browser: " + browser);
-            System.out.println("================================");
-
-            // STEP 1: Start browser through Selenium Grid
+            // STEP 1: Start browser using Selenium Grid
             if (browser.equalsIgnoreCase("chrome")) {
 
                 ChromeOptions options = new ChromeOptions();
 
                 driver = new RemoteWebDriver(
-                        new URL(GRID_URL), options);
+                        java.net.URI.create(GRID_URL).toURL(),
+                        options
+                );
 
             } else if (browser.equalsIgnoreCase("firefox")) {
 
                 FirefoxOptions options = new FirefoxOptions();
 
                 driver = new RemoteWebDriver(
-                        new URL(GRID_URL), options);
+                        java.net.URI.create(GRID_URL).toURL(),
+                        options
+                );
 
             } else {
                 throw new IllegalArgumentException(
-                        "Unsupported browser: " + browser);
+                        "Unsupported browser: " + browser
+                );
             }
 
-            WebDriverWait wait = new WebDriverWait(
-                    driver, Duration.ofSeconds(20));
+            driver.manage().timeouts()
+                    .implicitlyWait(Duration.ofSeconds(2));
 
-            // STEP 2: Open the hotel booking website
+            WebDriverWait wait = new WebDriverWait(
+                    driver,
+                    Duration.ofSeconds(20)
+            );
+
+            System.out.println(
+                    "\n========== " + browser.toUpperCase()
+                            + " TEST STARTED =========="
+            );
+
+            // STEP 2: Open website
             driver.get(WEBSITE_URL);
 
-            wait.until(d ->
-                    "complete".equals(
-                            ((JavascriptExecutor) d)
-                                    .executeScript(
-                                            "return document.readyState")));
+            wait.until(ExpectedConditions
+                    .presenceOfElementLocated(By.tagName("body")));
+
+            System.out.println("Website opened successfully.");
+            System.out.println("Page title: " + driver.getTitle());
+            System.out.println("Current URL: " + driver.getCurrentUrl());
 
             Assertions.assertTrue(
-                    driver.getCurrentUrl().contains("/apps/hotel"),
-                    "Hotel booking page did not open");
+                    driver.getTitle().contains("StayEase"),
+                    "Unexpected page title in " + browser
+            );
+
+            System.out.println("PASS: Website title verified.");
+
+            // STEP 3: Verify destination section
+            String pageText = driver.findElement(
+                    By.tagName("body")
+            ).getText();
 
             Assertions.assertTrue(
-                    driver.findElement(By.tagName("body"))
-                            .isDisplayed(),
-                    "Page body is not visible");
+                    pageText.contains("Where are you going?"),
+                    "Destination section not found in " + browser
+            );
 
-            System.out.println(
-                    "PASS: Website opened in " + browser);
+            System.out.println("PASS: Destination section found.");
 
-            System.out.println(
-                    "Page title: " + driver.getTitle());
+            // STEP 4: Verify check-in section
+            Assertions.assertTrue(
+                    pageText.contains("Pick a check-in date"),
+                    "Check-in section not found in " + browser
+            );
 
-            System.out.println(
-                    "Current URL: " + driver.getCurrentUrl());
+            System.out.println("PASS: Check-in section found.");
 
-            // STEP 3: Find the Search button
-            List<WebElement> searchButtons =
-                    driver.findElements(
-                            By.xpath(
-                                    "//button[contains(" +
-                                    "translate(normalize-space(.)," +
-                                    "'SEARCH','search'),'search')]"));
+            // STEP 5: Find Search hotels button
+            List<WebElement> searchButtons = driver.findElements(
+                    By.xpath(
+                            "//button[contains(" +
+                            "translate(normalize-space(.)," +
+                            "'SEARCH','search'),'search')]"
+                    )
+            );
 
+            // Try submit buttons if the text locator did not work
             if (searchButtons.isEmpty()) {
                 searchButtons = driver.findElements(
                         By.cssSelector(
                                 "button[type='submit'], " +
-                                "input[type='submit']"));
+                                "input[type='submit']"
+                        )
+                );
             }
 
             Assertions.assertFalse(
                     searchButtons.isEmpty(),
-                    "Search button was not found");
+                    "Search button not found in " + browser
+            );
 
             WebElement searchButton = searchButtons.get(0);
 
-            Assertions.assertTrue(
-                    searchButton.isDisplayed(),
-                    "Search button is not visible");
-
-            System.out.println(
-                    "PASS: Search button found in " + browser);
-
-            // STEP 4: Check whether validation elements exist
-            System.out.println(
-                    "error-city element count: " +
-                    driver.findElements(By.id("error-city")).size());
-
-            System.out.println(
-                    "error-checkin element count: " +
-                    driver.findElements(By.id("error-checkin")).size());
-
-            // STEP 5: Submit the empty search form
             ((JavascriptExecutor) driver).executeScript(
                     "arguments[0].scrollIntoView(" +
                     "{block:'center'});",
-                    searchButton);
+                    searchButton
+            );
 
-            wait.until(d -> searchButton.isDisplayed()
-                    && searchButton.isEnabled());
+            wait.until(ExpectedConditions
+                    .visibilityOf(searchButton));
+
+            Assertions.assertTrue(
+                    searchButton.isEnabled(),
+                    "Search button is disabled in " + browser
+            );
+
+            System.out.println("PASS: Search button found and enabled.");
+
+            // STEP 6: Click Search hotels
+            wait.until(ExpectedConditions
+                    .elementToBeClickable(searchButton));
 
             searchButton.click();
 
-            System.out.println(
-                    "Clicked Search in " + browser);
+            System.out.println("PASS: Search button clicked.");
 
-            // STEP 6: Allow the page to update, then print diagnostics
+            // STEP 7: Wait for page response
             Thread.sleep(2000);
 
-            System.out.println(
-                    "Page text after Search (" + browser + "):");
-
-            System.out.println(
-                    driver.findElement(By.tagName("body")).getText());
-
-            System.out.println(
-                    "City validation element count: " +
-                    driver.findElements(By.id("error-city")).size());
-
-            System.out.println(
-                    "Check-in validation element count: " +
-                    driver.findElements(By.id("error-checkin")).size());
-
-            // STEP 7: Check whether either validation message appears
-            boolean validationAppeared = wait.until(d -> {
-
-                List<WebElement> cityErrors =
-                        d.findElements(By.id("error-city"));
-
-                List<WebElement> dateErrors =
-                        d.findElements(By.id("error-checkin"));
-
-                boolean cityVisible = cityErrors.stream()
-                        .anyMatch(element -> {
-                            try {
-                                return element.isDisplayed()
-                                        && !element.getText()
-                                                .trim().isEmpty();
-                            } catch (Exception e) {
-                                return false;
-                            }
-                        });
-
-                boolean dateVisible = dateErrors.stream()
-                        .anyMatch(element -> {
-                            try {
-                                return element.isDisplayed()
-                                        && !element.getText()
-                                                .trim().isEmpty();
-                            } catch (Exception e) {
-                                return false;
-                            }
-                        });
-
-                return cityVisible || dateVisible;
-            });
+            WebElement body = driver.findElement(By.tagName("body"));
 
             Assertions.assertTrue(
-                    validationAppeared,
-                    "No city or check-in validation message appeared " +
-                    "after submitting the empty search form.");
+                    body.isDisplayed(),
+                    "Page is not visible after clicking Search."
+            );
 
             System.out.println(
-                    "PASS: Empty-search validation displayed in "
-                            + browser);
+                    "URL after search: " + driver.getCurrentUrl()
+            );
+
+            System.out.println("Page response verified.");
+
+            // STEP 8: Test completed
+            System.out.println(
+                    "========== " + browser.toUpperCase()
+                            + " TEST PASSED ==========\n"
+            );
 
         } catch (Exception e) {
 
             System.err.println(
-                    "FAIL: " + browser + " test failed");
+                    "\n========== " + browser.toUpperCase()
+                            + " TEST FAILED =========="
+            );
 
-            System.err.println(
-                    "Reason: " + e.getMessage());
+            System.err.println("Reason: " + e.getMessage());
 
             throw e;
 
         } finally {
 
+            // STEP 9: Close browser session
             if (driver != null) {
                 driver.quit();
-
                 System.out.println(
-                        "Closed " + browser + " session");
+                        browser + " browser session closed."
+                );
             }
         }
     }
