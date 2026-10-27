@@ -20,7 +20,7 @@ pipeline {
                                 set "JAVA_HOME=C:\\Program Files\\java\\jdk-25"
                                 set "PATH=%JAVA_HOME%\\bin;%PATH%"
 
-                                call "C:\\Users\\samiya\\Downloads\\apache-maven-3.10.0-bin\\apache-maven-3.10.0\\bin\\mvn.cmd" clean "-Dtest=StayEaseBookingTest#testHotelBookingInChrome" test
+                                call "C:\\Users\\samiya\\Downloads\\apache-maven-3.10.0-bin\\apache-maven-3.10.0\\bin\\mvn.cmd" "-Dtest=StayEaseBookingTest#testHotelBookingInChrome" clean test
 
                                 if errorlevel 1 exit /b 1
                             '''
@@ -37,7 +37,7 @@ pipeline {
                                 set "JAVA_HOME=C:\\Program Files\\java\\jdk-25"
                                 set "PATH=%JAVA_HOME%\\bin;%PATH%"
 
-                                call "C:\\Users\\samiya\\Downloads\\apache-maven-3.10.0-bin\\apache-maven-3.10.0\\bin\\mvn.cmd" clean "-Dtest=StayEaseBookingTest#testHotelBookingInFirefox" test
+                                call "C:\\Users\\samiya\\Downloads\\apache-maven-3.10.0-bin\\apache-maven-3.10.0\\bin\\mvn.cmd" "-Dtest=StayEaseBookingTest#testHotelBookingInFirefox" clean test
 
                                 if errorlevel 1 exit /b 1
                             '''
