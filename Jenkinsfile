@@ -3,39 +3,59 @@ pipeline {
     agent any
 
     stages {
-        stage('Cross-Browser Testing') {
+        stage('Start Selenium Grid') {
             steps {
-                bat '''
-                    set "JAVA_HOME=C:\\Program Files\\java\\jdk-25"
-                    set "PATH=%JAVA_HOME%\\bin;%PATH%"
+                bat 'docker compose up -d --wait'
+            }
+        }
 
-                    call "%USERPROFILE%\\Downloads\\apache-maven-3.10.0-bin\\apache-maven-3.10.0\\bin\\mvn.cmd" -f "C:\\Users\\samiya\\Downloads\\selenium-jenkins\\pom.xml" clean test
-                    set "TEST_RESULT=%ERRORLEVEL%"
+        stage('Cross-Browser Testing') {
+            parallel {
+                stage('Chrome Tests') {
+                    steps {
+                        dir('chrome-workspace') {
+                            checkout scm
 
-                    if not exist target mkdir target
-                    if exist "C:\\Users\\samiya\\Downloads\\selenium-jenkins\\target\\surefire-reports" (
-                        xcopy /E /I /Y "C:\\Users\\samiya\\Downloads\\selenium-jenkins\\target\\surefire-reports" target\\surefire-reports
-                    )
-                    if exist "C:\\Users\\samiya\\Downloads\\selenium-jenkins\\target\\screenshots" (
-                        xcopy /E /I /Y "C:\\Users\\samiya\\Downloads\\selenium-jenkins\\target\\screenshots" target\\screenshots
-                    )
+                            bat '''
+                                set "JAVA_HOME=C:\\Program Files\\java\\jdk-25"
+                                set "PATH=%JAVA_HOME%\\bin;%PATH%"
 
-                    exit /b %TEST_RESULT%
-                '''
+                                call "C:\\Users\\samiya\\Downloads\\apache-maven-3.10.0-bin\\apache-maven-3.10.0\\bin\\mvn.cmd" clean "-Dtest=StayEaseBookingTest#testHotelBookingInChrome" test
+
+                                if errorlevel 1 exit /b 1
+                            '''
+                        }
+                    }
+                }
+
+                stage('Firefox Tests') {
+                    steps {
+                        dir('firefox-workspace') {
+                            checkout scm
+
+                            bat '''
+                                set "JAVA_HOME=C:\\Program Files\\java\\jdk-25"
+                                set "PATH=%JAVA_HOME%\\bin;%PATH%"
+
+                                call "C:\\Users\\samiya\\Downloads\\apache-maven-3.10.0-bin\\apache-maven-3.10.0\\bin\\mvn.cmd" clean "-Dtest=StayEaseBookingTest#testHotelBookingInFirefox" test
+
+                                if errorlevel 1 exit /b 1
+                            '''
+                        }
+                    }
+                }
             }
         }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'target/**',
-                             allowEmptyArchive: true
+            archiveArtifacts(
+                artifacts: 'chrome-workspace/target/surefire-reports/**,chrome-workspace/target/screenshots/**,firefox-workspace/target/surefire-reports/**,firefox-workspace/target/screenshots/**',
+                allowEmptyArchive: true
+            )
 
-            bat '''
-                if exist target\\screenshots rmdir /s /q target\\screenshots
-                if exist target\\surefire-reports rmdir /s /q target\\surefire-reports
-            '''
-            echo 'Cleanup completed. Archived reports are retained in Jenkins.'
+            bat 'docker compose down'
         }
     }
 }
