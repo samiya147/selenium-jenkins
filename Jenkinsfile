@@ -61,8 +61,8 @@ post {
         )
 
         bat 'docker ps -a'
-        bat 'docker inspect --format "{{json .State.Health}}" selenium-hub'
-        bat 'docker logs selenium-hub'
+       bat 'docker inspect --format "{{json .State.Health}}" selenium-crossbrowser-pipeline-selenium-hub-1'
+        bat 'docker logs selenium-crossbrowser-pipeline-selenium-hub-1'
     }
 }
 
