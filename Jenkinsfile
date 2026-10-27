@@ -52,14 +52,18 @@ pipeline {
         }
     }
 
-    post {
-        always {
-            archiveArtifacts(
-                artifacts: 'chrome-workspace/target/surefire-reports/**,chrome-workspace/target/screenshots/**,firefox-workspace/target/surefire-reports/**,firefox-workspace/target/screenshots/**',
-                allowEmptyArchive: true
-            )
-            bat 'docker logs selenium-hub'
-            bat 'docker compose down'
-        }
+   
+post {
+    always {
+        archiveArtifacts(
+            artifacts: 'chrome-workspace/target/surefire-reports/**,chrome-workspace/target/screenshots/**,firefox-workspace/target/surefire-reports/**,firefox-workspace/target/screenshots/**',
+            allowEmptyArchive: true
+        )
+
+        bat 'docker ps -a'
+        bat 'docker inspect --format "{{json .State.Health}}" selenium-hub'
+        bat 'docker logs selenium-hub'
     }
+}
+
 }
