@@ -94,6 +94,7 @@ public class StayEaseBookingTest {
 
         } finally {
             if (driver != null) {
+                Thread.sleep(15000);
                 driver.quit();
             }
         }
