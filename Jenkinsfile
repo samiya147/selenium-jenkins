@@ -5,7 +5,9 @@ pipeline {
     stages {
         stage('Start Selenium Grid') {
             steps {
-                bat 'docker compose up -d --wait'
+                bat 'docker compose up -d'
+                bat 'timeout /t 15 /nobreak'
+                bat 'docker ps -a'
             }
         }
 
