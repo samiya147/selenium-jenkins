@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -37,29 +38,41 @@ public class StayEaseBookingTest {
         WebDriver driver = null;
 
         try {
-            System.out.println("Starting " + browser);
+            System.out.println("================================");
+            System.out.println("Starting browser: " + browser);
+            System.out.println("================================");
 
+            // STEP 1: Start browser through Selenium Grid
             if (browser.equalsIgnoreCase("chrome")) {
+
                 ChromeOptions options = new ChromeOptions();
+
                 driver = new RemoteWebDriver(
                         new URL(GRID_URL), options);
-            } else {
+
+            } else if (browser.equalsIgnoreCase("firefox")) {
+
                 FirefoxOptions options = new FirefoxOptions();
+
                 driver = new RemoteWebDriver(
                         new URL(GRID_URL), options);
+
+            } else {
+                throw new IllegalArgumentException(
+                        "Unsupported browser: " + browser);
             }
 
             WebDriverWait wait = new WebDriverWait(
                     driver, Duration.ofSeconds(20));
 
-            // TEST 1: Open the hotel booking website
+            // STEP 2: Open the hotel booking website
             driver.get(WEBSITE_URL);
 
             wait.until(d ->
-                    ((org.openqa.selenium.JavascriptExecutor) d)
-                            .executeScript(
-                                    "return document.readyState")
-                            .equals("complete"));
+                    "complete".equals(
+                            ((JavascriptExecutor) d)
+                                    .executeScript(
+                                            "return document.readyState")));
 
             Assertions.assertTrue(
                     driver.getCurrentUrl().contains("/apps/hotel"),
@@ -73,13 +86,17 @@ public class StayEaseBookingTest {
             System.out.println(
                     "PASS: Website opened in " + browser);
 
-            System.out.println("Page title: "
-                    + driver.getTitle());
+            System.out.println(
+                    "Page title: " + driver.getTitle());
 
-            // TEST 2: Check the expected search controls
+            System.out.println(
+                    "Current URL: " + driver.getCurrentUrl());
+
+            // STEP 3: Find the Search button
             List<WebElement> searchButtons =
                     driver.findElements(
-                            By.xpath("//button[contains(" +
+                            By.xpath(
+                                    "//button[contains(" +
                                     "translate(normalize-space(.)," +
                                     "'SEARCH','search'),'search')]"));
 
@@ -94,41 +111,58 @@ public class StayEaseBookingTest {
                     searchButtons.isEmpty(),
                     "Search button was not found");
 
+            WebElement searchButton = searchButtons.get(0);
+
+            Assertions.assertTrue(
+                    searchButton.isDisplayed(),
+                    "Search button is not visible");
+
             System.out.println(
                     "PASS: Search button found in " + browser);
 
-            // TEST 3: Check that validation elements exist.
-            // They may be hidden until an invalid search is submitted.
-            boolean cityErrorElementExists =
-                    !driver.findElements(
-                            By.id("error-city")).isEmpty();
-
-            boolean checkinErrorElementExists =
-                    !driver.findElements(
-                            By.id("error-checkin")).isEmpty();
+            // STEP 4: Check whether validation elements exist
+            System.out.println(
+                    "error-city element count: " +
+                    driver.findElements(By.id("error-city")).size());
 
             System.out.println(
-                    "error-city element exists: "
-                            + cityErrorElementExists);
+                    "error-checkin element count: " +
+                    driver.findElements(By.id("error-checkin")).size());
 
-            System.out.println(
-                    "error-checkin element exists: "
-                            + checkinErrorElementExists);
+            // STEP 5: Submit the empty search form
+            ((JavascriptExecutor) driver).executeScript(
+                    "arguments[0].scrollIntoView(" +
+                    "{block:'center'});",
+                    searchButton);
 
-            // TEST 4: Submit the empty search form
-            WebElement searchButton = searchButtons.get(0);
-
-            ((org.openqa.selenium.JavascriptExecutor) driver)
-                    .executeScript(
-                            "arguments[0].scrollIntoView(" +
-                            "{block:'center'});",
-                            searchButton);
+            wait.until(d -> searchButton.isDisplayed()
+                    && searchButton.isEnabled());
 
             searchButton.click();
 
-            // Wait for either validation error to appear.
-            // This avoids timing out on error-city alone.
+            System.out.println(
+                    "Clicked Search in " + browser);
+
+            // STEP 6: Allow the page to update, then print diagnostics
+            Thread.sleep(2000);
+
+            System.out.println(
+                    "Page text after Search (" + browser + "):");
+
+            System.out.println(
+                    driver.findElement(By.tagName("body")).getText());
+
+            System.out.println(
+                    "City validation element count: " +
+                    driver.findElements(By.id("error-city")).size());
+
+            System.out.println(
+                    "Check-in validation element count: " +
+                    driver.findElements(By.id("error-checkin")).size());
+
+            // STEP 7: Check whether either validation message appears
             boolean validationAppeared = wait.until(d -> {
+
                 List<WebElement> cityErrors =
                         d.findElements(By.id("error-city"));
 
@@ -136,34 +170,54 @@ public class StayEaseBookingTest {
                         d.findElements(By.id("error-checkin"));
 
                 boolean cityVisible = cityErrors.stream()
-                        .anyMatch(WebElement::isDisplayed);
+                        .anyMatch(element -> {
+                            try {
+                                return element.isDisplayed()
+                                        && !element.getText()
+                                                .trim().isEmpty();
+                            } catch (Exception e) {
+                                return false;
+                            }
+                        });
 
                 boolean dateVisible = dateErrors.stream()
-                        .anyMatch(WebElement::isDisplayed);
+                        .anyMatch(element -> {
+                            try {
+                                return element.isDisplayed()
+                                        && !element.getText()
+                                                .trim().isEmpty();
+                            } catch (Exception e) {
+                                return false;
+                            }
+                        });
 
                 return cityVisible || dateVisible;
             });
 
             Assertions.assertTrue(
                     validationAppeared,
-                    "No search validation appeared after " +
-                    "submitting an empty form");
+                    "No city or check-in validation message appeared " +
+                    "after submitting the empty search form.");
 
             System.out.println(
                     "PASS: Empty-search validation displayed in "
                             + browser);
 
         } catch (Exception e) {
+
             System.err.println(
                     "FAIL: " + browser + " test failed");
+
             System.err.println(
                     "Reason: " + e.getMessage());
 
             throw e;
 
         } finally {
+
             if (driver != null) {
                 driver.quit();
+
                 System.out.println(
                         "Closed " + browser + " session");
             }
